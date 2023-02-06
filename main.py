@@ -98,6 +98,12 @@ parser.add_argument("-sn", "--school_name",
                     help="The name of your school. Can be found in browser. default: IT-Schule Stuttgart",
                     default='_aXQtc2NodWxlIHN0dXR0Z2FydA==')
 
+parser.add_argument("-sh", "--short",
+                    dest="is_short",
+                    help="Short format",
+                    type=bool,
+                    default=False)
+
 args = parser.parse_args()
 
 session = requests.Session()
@@ -153,6 +159,9 @@ for key, value in periodDict.items():
         for double_period in double_periods:
             period['endTime'] = double_period['endTime']
             sorted_list.remove(double_period)
+
+    if args.is_short:
+        sorted_list = list(map(lambda obj: obj['lesson'] + ': ' + obj['content'], sorted_list))
 
     periodDict.update({
         key: sorted_list
