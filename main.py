@@ -4,7 +4,6 @@ import requests
 from datetime import datetime
 from argparse import ArgumentParser
 
-ELEMENT_ID = 12741
 BASE_URL = 'https://mese.webuntis.com/'
 API_URL = BASE_URL + 'WebUntis/api/'
 
@@ -36,14 +35,19 @@ def form_student_group(student_group: str):
 
 
 def get_auth_token(j_session_id: str):  # Implement cache
-    url = API_URL + "token/new"
-    header = {
-        'Cookie': f'JSESSIONID={j_session_id};',
-    }
-    res = session.get(url=url, headers=header)
-    if res.status_code != 200:
-        raise Exception(res.text)
-    return res.text
+    global jwt_token
+    if not jwt_token:
+        url = API_URL + "token/new"
+        header = {
+            'Cookie': f'JSESSIONID={j_session_id};',
+        }
+        res = session.get(url=url, headers=header)
+        if res.status_code != 200:
+            raise Exception(res.text)
+        jwt_token = res.text
+        return jwt_token
+    else:
+        return jwt_token
 
 
 def get_calendar_week(j_session_id: str, school_name: str, date_str: str, element_id: int):
@@ -82,6 +86,22 @@ def get_period_detail(j_session_id: str, period_date: str, period_start_time: st
     return r.json()
 
 
+def get_school_person_data(j_session_id: str):
+    url = API_URL + 'rest/view/v1/app/data'
+    headers = {
+        'Authorization': f'Bearer {get_auth_token(j_session_id)}'
+    }
+    r = session.get(url=url, headers=headers)
+    if r.status_code != 200:
+        raise Exception(r.text)
+    return r.json()
+
+
+def get_element_id(j_session_id: str):
+    school_person_data = get_school_person_data(j_session_id)
+    return school_person_data['user']['person']['id']
+
+
 parser = ArgumentParser()
 parser.add_argument("-js", "--j_session_id",
                     dest="j_session_id",
@@ -112,10 +132,11 @@ session = requests.Session()
 #     'http': 'proxy.its-stuttgart.de:3128',
 #     'https': 'proxy.its-stuttgart.de:3128', }
 
-calendarWeek = get_calendar_week(args.j_session_id, args.school_name, args.date, ELEMENT_ID)
+element_id = get_element_id(args.j_session_id)
+calendarWeek = get_calendar_week(args.j_session_id, args.school_name, args.date, element_id)
 data = calendarWeek['data']['result']['data']
 elementPeriods = data['elementPeriods']
-weekPeriods = elementPeriods[str(ELEMENT_ID)]
+weekPeriods = elementPeriods[str(element_id)]
 
 periodDict = {}
 
@@ -134,7 +155,7 @@ for period in weekPeriods:
         })
         period_list = periodDict.get(formatted_period_date)
 
-    periodRes = get_period_detail(args.j_session_id, period_date, periodStartTime, periodEndTime, ELEMENT_ID)
+    periodRes = get_period_detail(args.j_session_id, period_date, periodStartTime, periodEndTime, element_id)
 
     calendarEntries = periodRes['calendarEntries']
     teachingContent = calendarEntries[0]['teachingContent']
