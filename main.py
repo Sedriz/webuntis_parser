@@ -158,6 +158,6 @@ for key, value in periodDict.items():
         key: sorted_list
     })
 
-period_json = json.dumps(periodDict, indent=4)
+period_json = json.dumps(periodDict, indent=4, ensure_ascii=False)
 
 print(period_json)
