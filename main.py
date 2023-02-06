@@ -55,7 +55,7 @@ def get_calendar_week(j_session_id: str, school_name: str, date_str: str, elemen
         'formatId': 1
     }
     header = {
-        'Cookie': f'JSESSIONID={j_session_id}; schoolname="{school_name}"; traceId=238a78187d399beff69cdbbd5bbaf00b38e4e10f',
+        'Cookie': f'JSESSIONID={j_session_id}; schoolname="{school_name}"',
     }
 
     r = session.get(url=url, params=params, headers=header)
