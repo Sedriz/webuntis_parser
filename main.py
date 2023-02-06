@@ -120,7 +120,7 @@ for period in weekPeriods:
     periodEndTime = period['endTime']
     periodStudentGroup = form_student_group(period['studentGroup'])
     period_list = periodDict.get(formatted_period_date)
-    is_period_exam = period['cellState'] == 'EXAM'
+    period_state = period['cellState']
 
     if not period_list:
         periodDict.update({
@@ -138,7 +138,7 @@ for period in weekPeriods:
         'endTime': get_formatted_time(periodEndTime),
         'lesson': periodStudentGroup,
         'content': teachingContent or '',
-        'exam': is_period_exam
+        'state': period_state
     })
 
 for key, value in periodDict.items():
