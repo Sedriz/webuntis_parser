@@ -11,5 +11,19 @@ You need python + the request package.
 `-sn | school name: From browser, default it-schule stuttgart`  
 `-sh | short: Short or long format`  
 
-JSESSION: id must be copied from Browsers cookie storage.
+JSESSION: id must be copied from Browsers cookie storage.  
 Date: A weekday of the week you want to get.
+
+![Cookie Storage](assets/cookie_storage.png)
+
+## Result:
+
+---
+
+![Content](assets/content.png)
+
+### Short:
+
+---
+![Content short](assets/content_short.png)
+
