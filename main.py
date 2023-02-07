@@ -10,8 +10,8 @@ API_URL = BASE_URL + 'WebUntis/api/'
 jwt_token = ''
 
 
-def get_date_obj(date: str, time: str):  # 20230203 950
-    date_time_str = f'{date} {time}'
+def get_date_obj(date_str: str, time_str: str):  # 20230203 950
+    date_time_str = f'{date_str} {time_str}'
     return datetime.strptime(date_time_str, '%Y%m%d %H%M')
 
 
@@ -32,6 +32,25 @@ def get_formatted_date(date: str):
 
 def form_student_group(student_group: str):
     return student_group.split('_')[0]
+
+
+def remove_double_periods(period_list: []):
+    for period in period_list:
+        double_periods = filter(lambda obj:
+                                obj['lesson'] == period['lesson']
+                                and obj['startTime'] != period['startTime'], period_list)
+
+        for double_period in double_periods:
+            is_period_content_same = double_period['content'] == period['content']
+            if not args.is_short and not is_period_content_same:
+                continue
+            elif args.is_short and not is_period_content_same:
+                period['content'] = period['content'] + ", " + double_period['content']
+
+            period['endTime'] = double_period['endTime']
+            period_list.remove(double_period)
+
+    return period_list
 
 
 def get_auth_token(j_session_id: str):  # Implement cache
@@ -105,12 +124,13 @@ def get_element_id(j_session_id: str):
 parser = ArgumentParser()
 parser.add_argument("-js", "--j_session_id",
                     dest="j_session_id",
-                    help="JSESSIONID from browser",
+                    help="<Required> JSESSIONID from browser",
                     required=True)
 
-parser.add_argument("-d", "--date",
-                    dest="date",
-                    help="A day in the week you want to get the week. Format: '2023-01-25'",
+parser.add_argument("-d", "--dates",
+                    dest="date_list",
+                    nargs='+',
+                    help="<Required> A day in the week you want to get the week. Format: '2023-01-25'",
                     required=True)
 
 parser.add_argument("-sn", "--school_name",
@@ -133,53 +153,48 @@ session = requests.Session()
 #     'https': 'proxy.its-stuttgart.de:3128', }
 
 element_id = get_element_id(args.j_session_id)
-calendarWeek = get_calendar_week(args.j_session_id, args.school_name, args.date, element_id)
-data = calendarWeek['data']['result']['data']
-elementPeriods = data['elementPeriods']
-weekPeriods = elementPeriods[str(element_id)]
+
+date_list = args.date_list
 
 periodDict = {}
 
-for period in weekPeriods:
-    period_date = str(period['date'])
-    formatted_period_date = get_formatted_date(period_date)
-    periodStartTime = period['startTime']
-    periodEndTime = period['endTime']
-    periodStudentGroup = form_student_group(period['studentGroup'])
-    period_list = periodDict.get(formatted_period_date)
-    period_state = period['cellState']
+for date in date_list:
+    calendarWeek = get_calendar_week(args.j_session_id, args.school_name, date, element_id)
+    data = calendarWeek['data']['result']['data']
+    elementPeriods = data['elementPeriods']
+    weekPeriods = elementPeriods[str(element_id)]
 
-    if not period_list:
-        periodDict.update({
-            formatted_period_date: []
-        })
+    for period in weekPeriods:
+        period_date = str(period['date'])
+        formatted_period_date = get_formatted_date(period_date)
+        periodStartTime = period['startTime']
+        periodEndTime = period['endTime']
+        periodStudentGroup = form_student_group(period['studentGroup'])
         period_list = periodDict.get(formatted_period_date)
+        period_state = period['cellState']
 
-    periodRes = get_period_detail(args.j_session_id, period_date, periodStartTime, periodEndTime, element_id)
+        if not period_list:
+            periodDict.update({
+                formatted_period_date: []
+            })
+            period_list = periodDict.get(formatted_period_date)
 
-    calendarEntries = periodRes['calendarEntries']
-    teachingContent = calendarEntries[0]['teachingContent']
+        periodRes = get_period_detail(args.j_session_id, period_date, periodStartTime, periodEndTime, element_id)
 
-    period_list.append({
-        'startTime': get_formatted_time(periodStartTime),
-        'endTime': get_formatted_time(periodEndTime),
-        'lesson': periodStudentGroup,
-        'content': teachingContent or '',
-        'state': period_state
-    })
+        calendarEntries = periodRes['calendarEntries']
+        teachingContent = calendarEntries[0]['teachingContent']
+
+        period_list.append({
+            'startTime': get_formatted_time(periodStartTime),
+            'endTime': get_formatted_time(periodEndTime),
+            'lesson': periodStudentGroup,
+            'content': teachingContent or '',
+            'state': period_state
+        })
 
 for key, value in periodDict.items():
     sorted_list = sorted(value, key=lambda d: d['startTime'])
-
-    for period in sorted_list:
-        double_periods = filter(lambda obj:
-                                obj['content'] == period['content']
-                                and obj['lesson'] == period['lesson']
-                                and obj['startTime'] != period['startTime'], sorted_list)
-
-        for double_period in double_periods:
-            period['endTime'] = double_period['endTime']
-            sorted_list.remove(double_period)
+    sorted_list = remove_double_periods(sorted_list)
 
     if args.is_short:
         sorted_list = list(map(lambda obj: obj['lesson'] + ': ' + obj['content'], sorted_list))

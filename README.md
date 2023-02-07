@@ -6,7 +6,7 @@ You need python + the request package.
 
 `py main.py -d 2022-12-12 -js B5...`
 
-`-d | date: Formatted like 2022-12-12 | required`   
+`-d | dates: One or multiple dates separated by spaces. Formatted like 2022-12-12 | required`   
 `-js | JSESSIONID: From browser | required`  
 `-sn | school name: From browser, default it-schule stuttgart`  
 `-sh | short: Short or long format`  
